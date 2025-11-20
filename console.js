@@ -2,7 +2,7 @@
   let popup;
 
   document.addEventListener("keydown", e => {
-    if (event.altKey && event.shiftKey && (event.key === 'E' || event.key === 'e')) {
+    if (e.altKey && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
       event.preventDefault();
 
       if (!popup || popup.closed) {
