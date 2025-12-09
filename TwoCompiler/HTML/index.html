@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>TwoCompiler IDE</title>
+<link rel="icon" href="./favicon.ico" type="image/x-icon">
+
+<!-- CodeMirror -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/codemirror.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/theme/dracula.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.20/mode/css/css.min.js"></script>
+
+<style>
+  body, html { margin:0; height:100%; font-family:sans-serif; display:flex; flex-direction:column; background:#f5f5f5; }
+  #topbar { display:flex; align-items:center; justify-content:space-between; padding:5px 10px; background:#eee; flex-shrink:0; }
+  #tabs { display:flex; }
+  .tab { padding:6px 12px; cursor:pointer; border-bottom:2px solid transparent; margin-right:5px; }
+  .tab.active { border-bottom:2px solid #007acc; font-weight:bold; }
+  #topbar-buttons { display:flex; align-items:center; gap:8px; }
+  #logo { height:40px; width:auto; object-fit:contain; }
+  #container { flex:1; display:flex; overflow:hidden; position:relative; }
+  #editor-area { flex:1; display:flex; flex-direction:column; overflow:hidden; position:relative; }
+  #editors { flex:1; display:flex; flex-direction:column; }
+  .CodeMirror { flex:1; height:100%; }
+  #preview { flex:1; border:none; min-width:200px; }
+  #consoleButton { position:absolute; bottom:0; left:0; width:100%; background:#222; color:white; padding:10px; text-align:center; cursor:pointer; z-index:10; }
+  #console { position:absolute; bottom:0; left:0; width:100%; height:0; background:#111; color:white; font-family: monospace; overflow:auto; transition:height 0.3s; padding:5px; box-sizing:border-box; z-index:9; }
+  @media(max-width:800px){ #container{flex-direction:column;} #preview{height:200px;width:100%;} }
+  button { border:none; cursor:pointer; padding:5px 10px; border-radius:4px; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div id="tabs">
+    <div class="tab active" data-file="html">HTML</div>
+    <div class="tab" data-file="css">CSS</div>
+    <div class="tab" data-file="js">JS</div>
+  </div>
+  <div id="topbar-buttons">
+    <button id="themeToggle">Dark Mode</button>
+    <button id="run">Run ▶</button>
+    <img id="logo" src="./logo.png" alt="logo"/>
+  </div>
+</div>
+
+<div id="container">
+  <div id="editor-area">
+    <div id="editors"></div>
+    <div id="console"></div>
+    <div id="consoleButton">Open Console</div>
+  </div>
+  <iframe id="preview"></iframe>
+</div>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const editorsDiv = document.getElementById('editors');
+  const preview = document.getElementById('preview');
+  const consoleDiv = document.getElementById('console');
+  const consoleButton = document.getElementById('consoleButton');
+  const runBtn = document.getElementById('run');
+  const themeToggle = document.getElementById('themeToggle');
+
+  const initial = {
+    html: '<!DOCTYPE html>\n<html>\n  <body>\n    <h1>Hello World!</h1>\n  </body>\n</html>',
+    css: 'body { font-family: sans-serif; color: black; background:white; } h1 { color: red; }',
+    js: 'console.log("Hello World!");'
+  };
+
+  const editors = {};
+  let current = 'html';
+  let darkMode = false;
+  let consoleOpen = false;
+
+  function createEditor(lang, code) {
+    const mode = lang==='html'?'xml':lang==='css'?'css':'javascript';
+    return CodeMirror(editorsDiv, {
+      value: code,
+      mode: mode,
+      lineNumbers: true,
+      theme: 'default',
+      lineWrapping: true,
+      viewportMargin: Infinity
+    });
+  }
+
+  editors.html = createEditor('html', initial.html);
+  editors.css  = createEditor('css', initial.css);
+  editors.js   = createEditor('js', initial.js);
+
+  function switchTab(file){
+    current=file;
+    for(let f in editors){
+      editors[f].getWrapperElement().style.display = f===file?'block':'none';
+    }
+    tabs.forEach(t=>t.classList.toggle('active', t.dataset.file===file));
+  }
+
+  tabs.forEach(t=>{ t.onclick=()=>switchTab(t.dataset.file); });
+  switchTab('html');
+
+  function run(){
+    const html = editors.html.getValue();
+    const css  = editors.css.getValue();
+    const js   = editors.js.getValue();
+    preview.srcdoc = `
+      <html>
+        <head><style>${css}</style></head>
+        <body>${html}
+        <script>
+          const logs=[];
+          const orig=console.log;
+          console.log=function(...args){ logs.push(args.join(' ')); orig.apply(console,args); }
+          window.onload=()=>{window.parent.postMessage({logs},'*');};
+        <\/script>
+        <script>${js}<\/script>
+        </body>
+      </html>
+    `;
+  }
+
+  runBtn.onclick=run;
+
+  window.addEventListener('message', e=>{
+    if(e.data.logs) consoleDiv.innerText = e.data.logs.join('\n');
+  });
+
+  consoleButton.onclick=()=>{
+    consoleOpen = !consoleOpen;
+    consoleDiv.style.height = consoleOpen?'150px':'0';
+    consoleButton.innerText = consoleOpen?'Close Console':'Open Console';
+  }
+
+  themeToggle.onclick=()=>{
+    darkMode = !darkMode;
+    for(let f in editors) editors[f].setOption('theme', darkMode?'dracula':'default');
+    themeToggle.innerText = darkMode?'Light Mode':'Dark Mode';
+  }
+
+  window.addEventListener('resize', () => { for(let f in editors) editors[f].refresh(); });
+
+  run();
+</script>
+
+</body>
+</html>
