@@ -67,9 +67,9 @@
   const themeToggle = document.getElementById('themeToggle');
 
   const initial = {
-    html: '<!DOCTYPE html>\n<html>\n  <body>\n    <h1>Hello World!</h1>\n  </body>\n</html>',
-    css: 'body { font-family: sans-serif; color: black; background:white; } h1 { color: red; }',
-    js: 'console.log("Hello World!");'
+    html: '<!DOCTYPE html>\n<html>\n  <head>\n    <title>Hello, World!</title>\n  </head>\n  <body>\n      <h1 class="title">Hello World! </h1>\n      <p id="currentTime"></p>\n  </body>\n</html>',
+    css: 'body{\n  padding: 25px;\n}\n.title {\n\tcolor: red;\n}',
+    js: 'function showTime() {\n\tdocument.getElementById(\'currentTime\').innerHTML = new Date().toUTCString();\n}\nshowTime();\nsetInterval(function () {\n\tshowTime();\n}, 1000);',
   };
 
   const editors = {};
