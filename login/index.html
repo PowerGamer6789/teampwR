@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login • Team pwR</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="card">
+  <img src="/logo_dark.png" alt="Team pwR" class="logo">
+
+  <h1>Log into your Team pwR account</h1>
+  <p>Use your pwR username to continue</p>
+
+  <div class="field">
+    <input id="username" type="text" placeholder="Username">
+  </div>
+
+  <div class="field">
+    <input id="password" type="password" placeholder="Password">
+  </div>
+
+  <button id="login">Log In</button>
+
+  <div class="helper">
+    Don’t have an account? <a href="/signup">Create one</a>
+  </div>
+
+  <div class="error" id="status"></div>
+</div>
+
+<script type="module" src="./script.js"></script>
+</body>
+</html>
