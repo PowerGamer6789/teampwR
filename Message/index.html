@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pwRMessage</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f9f9f9; color: #1a1a1a; font-family: system-ui, sans-serif; overflow: hidden; }
+        .sidebar { width: 320px; background: white; border-right: 1px solid #eee; }
+        .message-bubble { padding: 12px 16px; border-radius: 18px; margin: 4px 0; max-width: 75%; font-size: 15px; line-height: 1.4; }
+        .sent { background-color: #000; color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .received { background-color: #fff; color: #000; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #eee; }
+        .active-chat { background-color: #f5f5f5; border-left: 4px solid #000; }
+        
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+        .toast { background: #000; color: #fff; padding: 14px 24px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); animation: slideIn 0.3s ease; font-weight: 600; }
+        
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 500; backdrop-filter: blur(4px); }
+        .modal-card { background: white; padding: 32px; border-radius: 24px; width: 90%; max-width: 400px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
+
+        .chat-item:hover .dot-btn { opacity: 1; }
+        .dot-btn { opacity: 0.3; transition: 0.2s; padding: 4px; cursor: pointer; border-radius: 50%; }
+        .dot-btn:hover { background: #eee; }
+        
+        .menu-dropdown { 
+            position: absolute; right: 10px; top: 45px; background: white; 
+            border: 1px solid #eee; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            z-index: 50; display: none; min-width: 160px; overflow: hidden;
+        }
+        .menu-item { padding: 12px 16px; font-size: 14px; cursor: pointer; font-weight: 500; }
+        .menu-item:hover { background: #f5f5f5; }
+        .danger { color: #ef4444; }
+
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
+</head>
+<body class="flex h-screen" onclick="closeAllMenus()">
+
+    <div id="toast-container"></div>
+
+    <div id="customModal" class="modal-overlay">
+        <div class="modal-card">
+            <h2 id="modalTitle" class="text-xl font-bold mb-2"></h2>
+            <p id="modalDesc" class="text-gray-500 mb-6 text-sm"></p>
+            <input id="modalInput" type="text" class="w-full bg-gray-100 p-4 rounded-xl outline-none focus:ring-2 focus:ring-black mb-6 border-none" spellcheck="false">
+            <div class="flex gap-3">
+                <button onclick="closeModal()" class="flex-grow p-3 rounded-xl font-bold text-gray-400 hover:bg-gray-50 transition">Cancel</button>
+                <button id="modalConfirm" class="flex-grow p-3 rounded-xl font-bold bg-black text-white hover:opacity-90 transition">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <aside class="sidebar flex flex-col">
+        <div class="p-6 border-b flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-tighter">pwRMessage</h1>
+            <button id="logoutBtn" class="text-xs font-bold text-gray-400 hover:text-black uppercase">Logout</button>
+        </div>
+        <div class="p-4 flex gap-2">
+            <button onclick="uiCreateChat()" class="flex-grow bg-black text-white font-semibold py-3 rounded-xl hover:opacity-80 transition">New Chat</button>
+            <button onclick="requestNotifs()" class="bg-gray-100 p-3 rounded-xl hover:bg-gray-200 transition">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            </button>
+        </div>
+        <div id="userList" class="flex-grow overflow-y-auto px-2"></div>
+    </aside>
+
+    <main class="flex-grow flex flex-col bg-white">
+        <header class="p-5 border-b font-bold flex justify-between items-center">
+            <span id="headerName" class="text-lg">Select a contact</span>
+            <span id="typing-indicator" class="text-xs font-normal text-gray-400 italic"></span>
+        </header>
+        <div id="messageDisplay" class="flex-grow p-6 overflow-y-auto flex flex-col"></div>
+        <div class="p-4 bg-white border-t flex gap-3">
+            <input id="msgInput" type="text" placeholder="Write a message..." class="flex-grow bg-gray-100 p-4 rounded-2xl outline-none focus:ring-1 focus:ring-black">
+            <button id="sendBtn" class="bg-black text-white px-8 rounded-2xl font-bold hover:opacity-80 transition">Send</button>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+        import { getDatabase, ref, push, onChildAdded, onValue, set, serverTimestamp, query, orderByChild, startAt, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD2B6GywfjWNvYoPvBsM97Z_Q0YK1Y736Y",
+            authDomain: "pwr-gamingreimagined.firebaseapp.com",
+            projectId: "pwr-gamingreimagined",
+            storageBucket: "pwr-gamingreimagined.firebasestorage.app",
+            messagingSenderId: "1031733683542",
+            appId: "1:1031733683542:web:772729552ffce628a1e2f7",
+            databaseURL: "https://pwr-gamingreimagined-default-rtdb.firebaseio.com"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const rtdb = getDatabase(app);
+        let db, currentUser, activeChat;
+        const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) window.location.href = "/login";
+            else { currentUser = user.displayName; initIndexedDB(); }
+        });
+
+        function initIndexedDB() {
+            const req = indexedDB.open("pwrmessage", 6);
+            req.onupgradeneeded = (e) => {
+                const d = e.target.result;
+                if (!d.objectStoreNames.contains('chats')) d.createObjectStore('chats', { keyPath: 'username' });
+                if (!d.objectStoreNames.contains('messages')) d.createObjectStore('messages', { keyPath: 'firebaseId' });
+                if (!d.objectStoreNames.contains('blocked')) d.createObjectStore('blocked', { keyPath: 'username' });
+            };
+            req.onsuccess = (e) => { db = e.target.result; loadSidebar(); listenForFirebase(); };
+        }
+
+        // --- POPUP SYSTEM ---
+        window.showToast = (text) => {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = 'toast'; el.innerText = text;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 4000);
+        };
+
+        window.openModal = ({title, desc, placeholder, onConfirm}) => {
+            const modal = document.getElementById('customModal');
+            const mConfirm = document.getElementById('modalConfirm');
+            const mInput = document.getElementById('modalInput');
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalDesc').innerText = desc || "";
+            mInput.placeholder = placeholder || "";
+            mInput.value = "";
+            modal.style.display = 'flex';
+            mInput.focus();
+
+            const newConfirm = mConfirm.cloneNode(true);
+            mConfirm.parentNode.replaceChild(newConfirm, mConfirm);
+            newConfirm.onclick = () => { onConfirm(mInput.value.trim()); closeModal(); };
+            mInput.onkeydown = (e) => { if (e.key === "Enter") newConfirm.click(); };
+        };
+        window.closeModal = () => document.getElementById('customModal').style.display = 'none';
+
+        // --- BACKEND ---
+        function listenForFirebase() {
+            const startTime = Date.now() - 5000;
+            const msgQuery = query(ref(rtdb, 'messages'), orderByChild('time'), startAt(startTime));
+            onChildAdded(msgQuery, (snap) => {
+                const data = snap.val();
+                if (data && data.receiver === currentUser) {
+                    const blockCheck = db.transaction('blocked', 'readonly').objectStore('blocked').get(data.sender);
+                    blockCheck.onsuccess = () => {
+                        if (blockCheck.result) { remove(ref(rtdb, `messages/${snap.key}`)); return; }
+                        
+                        const tx = db.transaction(['chats', 'messages'], 'readwrite');
+                        tx.objectStore('chats').put({ username: data.sender });
+                        tx.objectStore('messages').put({ firebaseId: snap.key, chatWith: data.sender, text: data.text, type: 'received' });
+                        tx.oncomplete = () => {
+                            remove(ref(rtdb, `messages/${snap.key}`)); 
+                            if (activeChat === data.sender) displayMessages();
+                            else showToast(`New from ${data.sender}`);
+                            notifySound.play().catch(()=>{});
+                            if (document.hidden && Notification.permission === "granted") new Notification(data.sender, { body: data.text });
+                            loadSidebar();
+                        };
+                    };
+                }
+            });
+        }
+
+        // --- PROTECTED USER LOGIC ---
+        window.uiBlockUser = (u) => {
+            if (u === "feedback") return showToast("Feedback cannot be blocked.");
+            openModal({
+                title: `Block ${u}?`,
+                desc: "Messages from this user will be ignored.",
+                onConfirm: () => {
+                    const tx = db.transaction(['blocked', 'chats'], 'readwrite');
+                    tx.objectStore('blocked').put({ username: u });
+                    tx.objectStore('chats').delete(u);
+                    tx.oncomplete = () => { if (activeChat === u) activeChat = null; loadSidebar(); displayMessages(); showToast("Blocked."); };
+                }
+            });
+        };
+
+        window.uiDeleteChat = (u) => {
+            if (u === "feedback") return showToast("Feedback history is permanent.");
+            openModal({
+                title: "Delete Chat?",
+                desc: `Type DELETE to wipe history with ${u}.`,
+                placeholder: "DELETE",
+                onConfirm: (val) => {
+                    if (val === "DELETE") {
+                        const tx = db.transaction(['chats', 'messages'], 'readwrite');
+                        tx.objectStore('chats').delete(u);
+                        const msgStore = tx.objectStore('messages');
+                        msgStore.openCursor().onsuccess = (e) => {
+                            const cursor = e.target.result;
+                            if (cursor) { if (cursor.value.chatWith === u) cursor.delete(); cursor.continue(); }
+                        };
+                        tx.oncomplete = () => { if(activeChat === u) activeChat = null; loadSidebar(); displayMessages(); showToast("Wiped."); };
+                    }
+                }
+            });
+        };
+
+        // --- UI RENDER ---
+        function loadSidebar() {
+            const list = document.getElementById('userList');
+            list.innerHTML = "";
+            renderChatItem({ username: "feedback" }, list, true); // Feedback always on top
+
+            db.transaction('chats').objectStore('chats').getAll().onsuccess = (e) => {
+                e.target.result.filter(c => c.username !== "feedback").forEach(contact => {
+                    renderChatItem(contact, list, false);
+                });
+            };
+        }
+
+        function renderChatItem(contact, container, isProtected) {
+            const div = document.createElement('div');
+            div.className = `chat-item relative flex items-center justify-between p-4 mb-1 rounded-xl cursor-pointer font-medium transition ${activeChat === contact.username ? 'active-chat' : 'hover:bg-gray-50'}`;
+            div.onclick = () => { 
+                activeChat = contact.username; 
+                document.getElementById('headerName').innerText = activeChat; 
+                displayMessages(); loadSidebar();
+            };
+            
+            const menuContent = isProtected ? 
+                `<div class="menu-item text-gray-400 italic">Protected User</div>` : 
+                `<div class="menu-item" onclick="uiBlockUser('${contact.username}')">Block User</div>
+                 <div class="menu-item danger" onclick="uiDeleteChat('${contact.username}')">Delete Chat</div>`;
+
+            div.innerHTML = `<span>${contact.username === "feedback" ? "Feedback" : contact.username}</span>
+                <div class="dot-btn" onclick="toggleMenu(event, '${contact.username}')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                </div>
+                <div id="menu-${contact.username}" class="menu-dropdown">${menuContent}</div>`;
+            container.appendChild(div);
+        }
+
+        function displayMessages() {
+            messageDisplay.innerHTML = "";
+            if (!activeChat) return;
+            db.transaction('messages').objectStore('messages').getAll().onsuccess = (e) => {
+                e.target.result.filter(m => m.chatWith === activeChat).forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = `message-bubble ${m.type === 'sent' ? 'sent' : 'received'}`;
+                    div.innerText = m.text;
+                    messageDisplay.appendChild(div);
+                });
+                messageDisplay.scrollTop = messageDisplay.scrollHeight;
+            };
+        }
+
+        function sendMessage() {
+            const text = msgInput.value.trim();
+            if (!text || !activeChat) return;
+            const newRef = push(ref(rtdb, 'messages'), { sender: currentUser, receiver: activeChat, text, time: serverTimestamp() });
+            const tx = db.transaction(['messages'], 'readwrite');
+            tx.objectStore('messages').put({ firebaseId: newRef.key, chatWith: activeChat, text, type: 'sent' });
+            tx.oncomplete = () => { displayMessages(); msgInput.value = ""; };
+        }
+
+        // --- LOGOUT & WIPE ---
+        window.wipeAndLogout = () => {
+            if (db) db.close();
+            const deleteReq = indexedDB.deleteDatabase("pwrmessage");
+            deleteReq.onsuccess = () => {
+                signOut(auth).then(() => { window.location.href = "/login"; });
+            };
+            deleteReq.onblocked = () => {
+                showToast("Close other tabs to logout.");
+                signOut(auth).then(() => { window.location.href = "/login"; });
+            };
+        };
+
+        // --- HANDLERS ---
+        window.uiCreateChat = () => {
+            openModal({
+                title: "New Chat",
+                onConfirm: (val) => {
+                    if (val === currentUser) return showToast("No.");
+                    const tx = db.transaction(['chats'], 'readwrite');
+                    tx.objectStore('chats').put({ username: val });
+                    tx.oncomplete = () => loadSidebar();
+                }
+            });
+        };
+
+        window.requestNotifs = async () => {
+            const p = await Notification.requestPermission();
+            showToast(p === 'granted' ? "Notifs Active" : "Notifs Blocked");
+            notifySound.play().catch(()=>{});
+        };
+
+        window.toggleMenu = (e, u) => { e.stopPropagation(); closeAllMenus(); document.getElementById(`menu-${u}`).style.display='block'; };
+        window.closeAllMenus = () => document.querySelectorAll('.menu-dropdown').forEach(m => m.style.display='none');
+        msgInput.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); sendMessage(); } };
+        sendBtn.onclick = sendMessage;
+        document.getElementById('logoutBtn').onclick = window.wipeAndLogout;
+    </script>
+</body>
+</html>

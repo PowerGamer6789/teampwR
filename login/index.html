@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | teampwR</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #fcfcfc; color: #1a1a1a;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card {
+      width: 100%; max-width: 400px; padding: 40px;
+      background: #ffffff; border-radius: 24px;
+      text-align: center; border: 1px solid #e5e5e5;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+    }
+    .logo { font-size: 28px; font-weight: 800; color: #000; margin-bottom: 24px; letter-spacing: -1px; }
+    input {
+      width: 100%; padding: 14px; margin: 8px 0;
+      background: #f5f5f5; border: 1px solid transparent;
+      border-radius: 12px; color: #000; font-size: 16px; outline: none; transition: 0.2s;
+    }
+    input:focus { border-color: #000; background: #fff; }
+    .btn {
+      width: 100%; padding: 14px; margin-top: 15px;
+      border-radius: 12px; font-weight: 700; cursor: pointer; border: none; font-family: inherit; transition: 0.2s;
+    }
+    .btn-primary { background: #000; color: #fff; }
+    .btn-primary:hover { opacity: 0.8; }
+    .btn-outline { background: #fff; border: 1px solid #e5e5e5; color: #666; margin-top: 10px; }
+    .btn-outline:hover { border-color: #000; color: #000; }
+    #message { font-size: 14px; margin-top: 15px; min-height: 20px; }
+    .error { color: #ef4444; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">teampwR</div>
+  <input type="text" id="username" placeholder="Username" spellcheck="false">
+  <input type="password" id="password" placeholder="Password">
+  <button id="loginBtn" class="btn btn-primary">Sign In</button>
+  <button id="signupBtn" class="btn btn-outline">Create Account</button>
+  <div id="message"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD2B6GywfjWNvYoPvBsM97Z_Q0YK1Y736Y",
+  authDomain: "pwr-gamingreimagined.firebaseapp.com",
+  projectId: "pwr-gamingreimagined",
+  storageBucket: "pwr-gamingreimagined.firebasestorage.app",
+  messagingSenderId: "1031733683542",
+  appId: "1:1031733683542:web:772729552ffce628a1e2f7"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+const getEmail = u => `${u.trim().toLowerCase()}@team.pwr`;
+
+document.getElementById("loginBtn").onclick = async () => {
+  try {
+    await signInWithEmailAndPassword(auth, getEmail(username.value), password.value);
+    window.location.href = "/Message";
+  } catch (e) {
+    document.getElementById("message").textContent = "Invalid login credentials";
+    document.getElementById("message").className = "error";
+  }
+};
+
+document.getElementById("signupBtn").onclick = async () => {
+  try {
+    const res = await createUserWithEmailAndPassword(auth, getEmail(username.value), password.value);
+    await updateProfile(res.user, { displayName: username.value.trim() });
+    window.location.href = "/Message";
+  } catch (e) {
+    document.getElementById("message").textContent = e.message;
+    document.getElementById("message").className = "error";
+  }
+};
+</script>
+</body>
+</html>
