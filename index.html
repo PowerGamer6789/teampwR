@@ -40,19 +40,29 @@
         transition: all 0.3s ease;
     }
 
-    /* Hero Logo */
+    /* Hero Logo - FIXED HERE */
     #logo-container {
         display: flex;
+        flex-direction: column; /* Stacks children vertically */
         justify-content: center;
         align-items: center;
         height: 100vh;
         transition: all 0.6s ease;
+        text-align: center; /* Centers the text under the logo */
+        padding: 0 20px;
     }
 
     #logo-container img {
         max-width: 300px;
         width: 50%;
         transition: all 0.6s ease;
+        margin-bottom: 20px; /* Adds space between logo and text */
+    }
+
+    #logo-container p {
+        max-width: 600px;
+        font-size: 1.2rem;
+        line-height: 1.5;
     }
 
     /* Products Section */
@@ -97,18 +107,15 @@
 </head>
 <body>
 
-<!-- Navbar -->
 <div id="navbar">
     <img src="./logo_dark.png" alt="Team pwR Logo">
 </div>
 
-<!-- Hero Logo -->
 <div id="logo-container">
     <img src="./logo_dark.png" alt="Team pwR Logo">
-    <p>is a team of developers creating helpful, practial, and easy-to-use web applications.</p>
+    <p>is a team of developers creating helpful, practical, and easy-to-use web applications.</p>
 </div>
 
-<!-- Products Section -->
 <section id="products">
     <h2>Our Stuff</h2>
     <div class="product-buttons">
