@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What's the link? - teampwR.dev</title>
+    
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f9f9f9;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #navbar {
+            width: 100%;
+            height: 60px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+        #navbar img { height: 35px; }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 0 20px;
+        }
+
+        .links-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 0 20px 100px 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* --- BASE CARD STYLES --- */
+        .link-card {
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: transform 0.2s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .link-card:hover { transform: translateY(-3px); }
+        
+        /* Fixed Image Handling */
+        .card-logo {
+            max-width: 250px; /* Limits logo size */
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        .link-card h2 { margin: 0; font-size: 1.5rem; }
+        .link-card .url-text { display: block; font-size: 0.85rem; margin: 5px 0 20px 0; opacity: 0.7; }
+        .link-card .sl-url-text { display: block; font-size: 1rem; margin: 5px 0 20px 0; opacity: 1; }
+        
+        .btn-check {
+            display: inline-block;
+            text-decoration: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: filter 0.2s;
+        }
+        .btn-check:hover { filter: brightness(90%); }
+
+        /* --- INDIVIDUAL CARD CLASSES --- */
+        
+        /* 1. Gaming Reimagined (Dark Purple Theme) */
+        .card-gaming { background-color: #121212; color: #fff; }
+        .card-gaming .btn-check { background-color: #ffcc00; color: #000000; }
+
+        /* 2. pwRMessage (Blue Theme) */
+        .card-pwrmessage { background-color: #ffffff; color: #000000; }
+        .card-pwrmessage .btn-check { background-color: #000000; color: #fff; }
+
+        /* 3. Starlight (Dark/Gold Theme) */
+        .card-starlight { background-color: #1a1a2e; color: #0d6efd; }
+        .card-starlight .btn-check { background-color: #5d3587; color: #fff; }
+
+        footer {
+            margin-top: auto;
+            padding: 40px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+<div id="navbar">
+    <img src="./logo_dark.png" alt="Team pwR Logo">
+</div>
+
+<header>
+    <h1>What's the link?</h1>
+</header>
+
+<div class="links-container">
+    
+    <div class="link-card card-gaming">
+        <img src="./gr_logo.png" alt="Gaming Reimagined" class="card-logo">
+        <span class="url-text">gamingreimagined.isback.thedaedals.com</span>
+        <a href="https://gamingreimagined.isback.thedaedals.com" class="btn-check">Check it out</a>
+    </div>
+
+    <div class="link-card card-pwrmessage">
+        <h2>pwRMessage</h2>
+        <span class="url-text">teampwr.dev/Message</span>
+        <a href="https://teampwr.dev/Message" class="btn-check">Check it out</a>
+    </div>
+
+    <div class="link-card card-starlight">
+        <h2>Looking for Starlight?</h2>
+        <span class="sl-url-text">Starlight is owned by Unixityyy. Access it at unixityyy.dev</span>
+        <a href="https://unixityyy.dev" class="btn-check">Go to unixityyy.dev</a>
+    </div>
+
+</div>
+
+<footer>
+    <p>&copy; 2026 teampwR.dev</p>
+</footer>
+
+</body>
+</html>
